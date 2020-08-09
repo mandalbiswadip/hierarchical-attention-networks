@@ -14,6 +14,7 @@ class CustomTokenizer(Tokenizer):
             CustomTokenizer, self).__init__(oov_token=oov_token)
         self.word_list = word_list
         self.word_index =  {v:i for i,v in enumerate(self.word_list)}
+        self.index_word = {i:v for i,v in enumerate(self.word_list)}
 
     def texts_to_sequences(self, texts):
         return super(CustomTokenizer, self).texts_to_sequences(texts=texts)
