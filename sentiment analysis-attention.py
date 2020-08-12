@@ -53,6 +53,7 @@ data = data.reset_index()
 
 data = data.filter(["text","sentiment"])
 data = data.sample(frac=1)
+data = data[:200]
 # =================================================
 import tensorflow as tf
 inp = tokenizer.doc_to_sequences(data.text.tolist())
@@ -92,7 +93,7 @@ print("Train data shape {}".format(a.shape))
 print("Beginning training.....")
 
 
-for word_num_hiden in [100, 150, 200]:
+for word_num_hiden in [10, 150, 200]:
     for sentence_num_hidden in [600, 1000, 2000, 4000]:
         print("word hum hidden {}".format(word_num_hiden))
         print("sentence hum hidden {}".format(sentence_num_hidden))

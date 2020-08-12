@@ -7,6 +7,10 @@ __pycache__/
 *.so
 
 *.ipynb
+positiveReviews*
+negativeReviews*
+model/*
+.idea/*
 
 all_data
 

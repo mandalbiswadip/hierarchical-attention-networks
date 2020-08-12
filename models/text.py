@@ -23,9 +23,13 @@ class CustomTokenizer(Tokenizer):
         indices = []
         if isinstance(docs, Iterable):
             for doc in docs:
-                doc = doc.split(sent_tokenizer)
+                doc = self.tokenize_sentence(doc=doc, sent_tokenizer=sent_tokenizer)
                 indices.append(self.texts_to_sequences(texts=doc))
         return indices
+
+    def tokenize_sentence(self, doc, sent_tokenizer = "."):
+        return [sent for sent in doc.split(sent_tokenizer) if sent]
+
 
 
 

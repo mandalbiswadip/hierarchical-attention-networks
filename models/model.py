@@ -118,19 +118,39 @@ class SequenceAttentionLayer(tf.keras.layers.Layer):
         config["embedding_len"] = self.embedding_len
         return config
 
-    def call(self, inputs):
+    def compute_mask(self, inputs, mask=None):
+        # Also split the mask into 2 if it presents.
+        if not self.if_embedding:
+            return None
+        # inputs = self.embed(inputs)
+        embed_mask = tf.math.not_equal(inputs, 0)
+        return tf.math.not_equal(
+            tf.reduce_sum(tf.cast(embed_mask, tf.int32), axis=-1), 0
+        )
+
+    def call(self, inputs, mask = None):
         # TODO include mask as input and make sure gets flowing
         # if embedding
         if self.if_embedding:
             inputs = self.embed(inputs)
             # putting every sentence in a single axis
+            inputs_mask = inputs._keras_mask
             inputs = tf.reshape(
                 inputs, shape = (-1 ,maxlen ,self.embedding_len)
             )
+            mask = tf.reshape(
+                inputs_mask,
+                shape=(-1, maxlen)
+            )
 
-        lstm_out = self.lstm(inputs)
-        h = self.attention_layer([lstm_out, lstm_out])
-        out = tf.reduce_mean(h, axis=1)
+        lstm_out = self.lstm(inputs, mask=mask)
+        lstm_mask = lstm_out._keras_mask
+
+        h = self.attention_layer(
+            [lstm_out, lstm_out],
+            mask = [lstm_mask, lstm_mask]
+        )
+        out = tf.reduce_mean(h, axis=-1)
         if self.if_embedding:
             # reshaping back to (batch_size, max seq len, embed length)
             out = tf.reshape(
@@ -154,7 +174,6 @@ class HierarchicalAttentionLayer(tf.keras.layers.Layer):
         self.word_num_hiden = word_num_hiden
         self.sentence_num_hidden = sentence_num_hidden
         self.sentence_layer = SequenceAttentionLayer(num_hidden=word_num_hiden, embedding=True)
-        # TODO include mask for document lstm
         self.document_layer = SequenceAttentionLayer(num_hidden=sentence_num_hidden)
 
 
@@ -169,7 +188,8 @@ class HierarchicalAttentionLayer(tf.keras.layers.Layer):
         sent_out = self.sentence_layer(
             input
         )
-        doc_out = self.document_layer(sent_out)
+        sent_mask = self.sentence_layer.compute_mask(inputs=input)
+        doc_out = self.document_layer(sent_out, mask=sent_mask)
         return doc_out
 
 class HierarchicalLSTMLayer(tf.keras.layers.Layer):
@@ -226,15 +246,33 @@ class HierarchicalLSTMLayer(tf.keras.layers.Layer):
         inputs = tf.reshape(
             inputs, shape = (-1 ,maxlen ,self.embedding_len)
         )
-        sent_out = self.lstm_sent(
-            inputs
+        mask = tf.reshape(
+            inputs._keras_mask,
+            shape=(-1, maxlen)
         )
+
+        sent_out = self.lstm_sent(
+            inputs, mask = mask
+        )
+
+        # from (batch size*max sent in doc, max words) to
+        # ---> (batch size, max # of sent in a doc, max words)
+        mask = tf.reshape(
+            mask,
+            shape=(-1, max_sentences, maxlen)
+        )
+
+        # (batch size, max # of sent in a doc)
+        doc_mask = tf.math.not_equal(
+            tf.reduce_sum(tf.cast(mask, tf.int32), axis=-1), 0
+        )
+
         # reshaping back to (batch_size, max seq len, embed length)
         sent_out = tf.reshape(
             sent_out,
             shape=(-1 ,max_sentences, self.word_num_hiden)
         )
-        doc_out = self.lstm_doc(sent_out)
+        doc_out = self.lstm_doc(sent_out, mask = doc_mask)
         return doc_out
 
 
