@@ -26,6 +26,7 @@ from tensorflow.python.ops import array_ops, math_ops
 from .word_vector import word_list, word_vectors
 
 ModelCheckpoint = keras.callbacks.ModelCheckpoint
+CSVLogger = keras.callbacks.CSVLogger
 
 
 # max number of sentences in a doc
@@ -34,6 +35,7 @@ max_sentences = 50
 # max number of words in sentence
 maxlen = 80
 masking_value = 0
+embedding_len = 50
 
 
 def get_attention_scores(self, inputs, mask=None):
@@ -100,6 +102,7 @@ class SequenceAttentionLayer(tf.keras.layers.Layer):
                 mask_zero=True,
                 trainable=False
             )
+            self.embed_mask = Masking(mask_value=0)
 
         self.lstm = LSTM(
             self.num_hidden,
@@ -110,6 +113,8 @@ class SequenceAttentionLayer(tf.keras.layers.Layer):
         self.attention_layer = AdditiveAttention(
             use_scale=True
         )
+
+        self.attention_layer.__setattr__('supports_masking', True)
 
     def get_config(self):
         config = super(SequenceAttentionLayer, self).get_config()
@@ -133,6 +138,7 @@ class SequenceAttentionLayer(tf.keras.layers.Layer):
         # if embedding
         if self.if_embedding:
             inputs = self.embed(inputs)
+            inputs = self.embed_mask(inputs)
             # putting every sentence in a single axis
             inputs_mask = inputs._keras_mask
             inputs = tf.reshape(
@@ -150,9 +156,9 @@ class SequenceAttentionLayer(tf.keras.layers.Layer):
             [lstm_out, lstm_out],
             mask = [lstm_mask, lstm_mask]
         )
-        out = tf.reduce_mean(h, axis=-1)
+        out = tf.reduce_mean(h, axis=-2)
         if self.if_embedding:
-            # reshaping back to (batch_size, max seq len, embed length)
+            # reshaping back to (batch_size, max seq len, num hidden)
             out = tf.reshape(
                 out,
                 shape=(-1 ,max_sentences, self.num_hidden)
@@ -195,6 +201,7 @@ class HierarchicalAttentionLayer(tf.keras.layers.Layer):
 class HierarchicalLSTMLayer(tf.keras.layers.Layer):
     """
     """
+    NUM_WORDS = None
 
     def __init__(self, word_num_hiden, sentence_num_hidden, embedding_len=50):
         """
@@ -209,12 +216,23 @@ class HierarchicalLSTMLayer(tf.keras.layers.Layer):
         self.sentence_num_hidden = sentence_num_hidden
 
         self.embedding_len = embedding_len
+
+        # if num words already set
+        if self.NUM_WORDS is None:
+            input_emb = len(word_vectors)
+            wv = [word_vectors]
+            trainable = False
+        else:
+            input_emb = self.NUM_WORDS
+            wv = None
+            trainable = True
+
         self.embed = Embedding(
-            input_dim=len(word_vectors),
+            input_dim=input_emb,
             output_dim=self.embedding_len,
-            weights=[word_vectors],
+            weights=wv,
             mask_zero=True,
-            trainable=False
+            trainable=trainable
         )
 
         self.lstm_sent = LSTM(
@@ -236,21 +254,15 @@ class HierarchicalLSTMLayer(tf.keras.layers.Layer):
 
 
     def call(self, inputs):
-        # embed
-        # reshape
-        # sent lstm layer
-        # reshape
-        # document lstm layer
         inputs = self.embed(inputs)
         # putting every sentence in a single axis
-        inputs = tf.reshape(
-            inputs, shape = (-1 ,maxlen ,self.embedding_len)
-        )
         mask = tf.reshape(
             inputs._keras_mask,
             shape=(-1, maxlen)
         )
-
+        inputs = tf.reshape(
+            inputs, shape = (-1 ,maxlen ,self.embedding_len)
+        )
         sent_out = self.lstm_sent(
             inputs, mask = mask
         )
@@ -267,7 +279,7 @@ class HierarchicalLSTMLayer(tf.keras.layers.Layer):
             tf.reduce_sum(tf.cast(mask, tf.int32), axis=-1), 0
         )
 
-        # reshaping back to (batch_size, max seq len, embed length)
+        # reshaping back to (batch_size, max seq len, hidden of sentence lstm)
         sent_out = tf.reshape(
             sent_out,
             shape=(-1 ,max_sentences, self.word_num_hiden)
@@ -283,7 +295,7 @@ def get_model(word_num_hiden=100, sentence_num_hidden=400, type="lstm" ):
     # (batch size, sentence num hidden)
     if type=="attention":
         h = HierarchicalAttentionLayer(
-            word_num_hiden=70, sentence_num_hidden=100)(inp)
+            word_num_hiden=word_num_hiden, sentence_num_hidden=sentence_num_hidden)(inp)
     elif type=="lstm":
         h = HierarchicalLSTMLayer(
             word_num_hiden=word_num_hiden, sentence_num_hidden=sentence_num_hidden)(inp)

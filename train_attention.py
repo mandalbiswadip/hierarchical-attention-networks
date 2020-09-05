@@ -1,18 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
 import os
-
-# In[49]:
-
 
 import numpy as np
 import pandas as pd
-
-
-# In[53]:
-
 
 from models.text import CustomTokenizer
 from models.model import word_list, max_sentences, maxlen
@@ -20,7 +12,9 @@ from models.model import word_list, max_sentences, maxlen
 
 tokenizer = CustomTokenizer(word_list = word_list)
 
-batch_s = 32
+batch_s = 16
+split_len = 18000
+
 
 path = "negativeReviews/"
 neg_reviews = []
@@ -53,7 +47,7 @@ data = data.reset_index()
 
 data = data.filter(["text","sentiment"])
 data = data.sample(frac=1)
-data = data[:200]
+# data = data.iloc[:10]
 # =================================================
 import tensorflow as tf
 inp = tokenizer.doc_to_sequences(data.text.tolist())
@@ -68,7 +62,7 @@ for doc in inp:
 a = np.zeros((len(inputs),max_sentences,maxlen))
 
 for row,x in zip(a, inputs):
-    row[:len(x)] = x[:50]
+    row[:len(x)] = x[:max_sentences]
 
 
 # Define Model
@@ -86,17 +80,20 @@ from models.data import Sequence_generator
 y = data.sentiment.values
 
 
-split_len = 18000
 x_train, y_train, x_test, y_test = a[:split_len], y[:split_len], a[split_len:], y[split_len:]
 
 print("Train data shape {}".format(a.shape))
 print("Beginning training.....")
 
 
-for word_num_hiden in [10, 150, 200]:
-    for sentence_num_hidden in [600, 1000, 2000, 4000]:
+#
+
+for word_num_hiden in [ 150, 250]:
+    for sentence_num_hidden in [200, 300, 400]:
+        print("="*40)
         print("word hum hidden {}".format(word_num_hiden))
         print("sentence hum hidden {}".format(sentence_num_hidden))
+        print("="*40)
 
         model = get_model(
             word_num_hiden=word_num_hiden,
@@ -122,7 +119,7 @@ for word_num_hiden in [10, 150, 200]:
                     batch_s
                 ),
                 steps_per_epoch=int(len(x_train)/batch_s),
-                epochs=10,
+                epochs=30,
                 verbose=2,
                 validation_data=(x_test, y_test),
                 callbacks=[checkpoint]
