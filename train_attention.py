@@ -1,49 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os
-
 import numpy as np
 import pandas as pd
 
 from models.text import CustomTokenizer
 from models.model import word_list, max_sentences, maxlen
 
-
 tokenizer = CustomTokenizer(word_list = word_list)
 
 batch_s = 16
 split_len = 18000
 
-
-path = "negativeReviews/"
-neg_reviews = []
-for f in os.listdir(path):
-    file = os.path.join(path, f)
-    with open(file, "r") as fl:
-        neg_reviews.append(fl.read())
-    
-
-path = "positiveReviews//"
-pos_reviews = []
-for f in os.listdir(path):
-    file = os.path.join(path, f)
-    with open(file, "r") as fl:
-        pos_reviews.append(fl.read())
-
-data = pd.DataFrame(
-    {"text":neg_reviews, "sentiment":0}
-).append(pd.DataFrame(
-    {"text":pos_reviews, "sentiment":1}
-))
-
-print("Data Shape {}".format(data.shape))
-# data.to_csv("tagged_data.csv")
-print("Class Distribution {}".format(
-    data.sentiment.value_counts())
-)
-
-data = data.reset_index()
+data = pd.read_csv("tagged_data.csv")
 
 data = data.filter(["text","sentiment"])
 data = data.sample(frac=1)
@@ -84,9 +53,6 @@ x_train, y_train, x_test, y_test = a[:split_len], y[:split_len], a[split_len:], 
 
 print("Train data shape {}".format(a.shape))
 print("Beginning training.....")
-
-
-#
 
 for word_num_hiden in [ 150, 250]:
     for sentence_num_hidden in [200, 300, 400]:

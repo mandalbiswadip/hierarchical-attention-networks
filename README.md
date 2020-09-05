@@ -1,8 +1,7 @@
 
 Experiments:
-1. Sentiment analysis using word2vec embedding as features and LSTM Network to classify the sentiment.
-2. Use HANs with LSTM network to classify sentiment
-3. Use HANs with LSTM + attention to classify sentiment
+1. Use HANs with LSTM network to classify sentiment
+2. Use HANs with LSTM + attention to classify sentiment
 
 Run the following commands
 ```
@@ -17,3 +16,5 @@ unzip data.zip
 python3 train_attention.py
 python3 train_lstm.py
 ```
+#### train lstm
+Takes around 120s for training a single epoch on  Tesla P100 GPU
