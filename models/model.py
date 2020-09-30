@@ -156,7 +156,7 @@ class SequenceAttentionLayer(tf.keras.layers.Layer):
             [lstm_out, lstm_out],
             mask = [lstm_mask, lstm_mask]
         )
-        out = tf.reduce_mean(h, axis=-2)
+        out = tf.reduce_mean (h, axis=-2)
         if self.if_embedding:
             # reshaping back to (batch_size, max seq len, num hidden)
             out = tf.reshape(

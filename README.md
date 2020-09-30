@@ -8,13 +8,26 @@ Run the following commands
 git clone https://github.com/mandalbiswadip/hierarchical-attention-networks.git
 cd hierarchical-attention-networks
 unzip data.zip
+pip install -r requirements.txt
 ```
 
+
+
+### Create dataset
+
+```
+python3 create_training_data.py
+```
 ### Training:
 
 ```
 python3 train_attention.py
 python3 train_lstm.py
 ```
-#### train lstm
-Takes around 120s for training a single epoch on  Tesla P100 GPU
+### Analyze results
+See the Analysis at:
+```
+analyze attention.ipynb
+```
+
+See related blog at: [Self-Attention and HANs](https://mandalbiswadip.github.io/attention/)
