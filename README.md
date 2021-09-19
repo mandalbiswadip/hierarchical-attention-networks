@@ -15,12 +15,12 @@ pip install -r requirements.txt
 
 ### Create dataset
 
-```
+```python
 python3 create_training_data.py
 ```
 ### Training:
 
-```
+```python
 python3 train_attention.py
 python3 train_lstm.py
 ```
